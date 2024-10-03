@@ -20,4 +20,5 @@ schedule.every().day.at("16:20").do(retrieveDepartures(8000078,"5pm"))
 
 while True:
     schedule.run_pending()
-    time.sleep(1)
+    time.sleep(10)
+    
