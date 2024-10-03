@@ -8,7 +8,7 @@ import datetime
 #Pasing - 8004158
 #Munchen - 8000261
 
-def retrieveDepartures(station_id=8000261,desiredDate='5pm'):
+def retrieveDepartures(station_id=8000078,desiredDate='yesterday 5pm'):
     
     headers = {'Accept': 'application/json'}
 
