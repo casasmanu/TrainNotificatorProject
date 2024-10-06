@@ -18,7 +18,7 @@ def bot_send_msg(msg):
 
 
 def getNewUsers():
- bot = telebot.TeleBot(botToken)  
+ bot = telebot.TeleBot(__main__.botToken)  
  arrRawData=bot.get_updates()
  arrIds=[]
  

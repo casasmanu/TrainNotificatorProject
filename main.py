@@ -3,7 +3,7 @@ import time
 import os
 from dotenv import load_dotenv
 import logging
-from traindriver import retrieveDepartures
+from traindriver import retrieveDepartures,journeyPlanner
 
 # ----------------------------Global variables ------------------------------_#
 global botToken,destinatary
@@ -26,13 +26,13 @@ try:
 except:
     logger.error("Main.py - Error while loading init variables from .env")
 
-retrieveDepartures(station_id=8000261,desiredDate="7am")
+#retrieveDepartures(station_id=8004158,desiredDate="tomorrow 7am")
+journeyPlanner()
 
 def main():
     #DONA - 8000078
     #Pasing - 8004158
     #Munchen - 8000261
-    
     # Programa las llamadas a las funciones en intervalos diferentes
     schedule.every().day.at("06:30").do(
         retrieveDepartures,station_id=8004158,desiredDate="7am")
@@ -41,11 +41,11 @@ def main():
         retrieveDepartures,station_id=8000078,desiredDate="5pm")
     
     schedule.every().day.at("22:00").do(
-        retrieveDepartures,station_id=8000261,desiredDate="7am")
+        retrieveDepartures,station_id=8000261,desiredDate="tomorrow 7am")
     
     while True:
         schedule.run_pending()
-        time.sleep(300)
+        time.sleep(5)
 
 if __name__ == "__main__":
     main()
