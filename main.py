@@ -27,7 +27,7 @@ except:
     logger.error("Main.py - Error while loading init variables from .env")
 
 #retrieveDepartures(station_id=8004158,desiredDate="tomorrow 7am")
-journeyPlanner()
+#journeyPlanner()
 
 def main():
     #DONA - 8000078
@@ -41,6 +41,9 @@ def main():
         retrieveDepartures,station_id=8000078,desiredDate="5pm")
     
     schedule.every().day.at("22:00").do(
+        journeyPlanner,origin=8000261,destination=8000078,when="tomorrow 7am")
+    
+    schedule.every().day.at("23:00").do(
         retrieveDepartures,station_id=8000261,desiredDate="tomorrow 7am")
     
     while True:
