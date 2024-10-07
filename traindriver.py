@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 #Munchen - 8000261
 #Augsburg
 
-def retrieveDepartures(station_id=8000078,desiredDate='yesterday 5pm',service="regional",value=True):
+def retrieveDepartures(station_id=8000078,desiredDate='yesterday 5pm',services=["nationalExpress"]):
     
     bahnhof=[]
     try:    
@@ -33,7 +33,9 @@ def retrieveDepartures(station_id=8000078,desiredDate='yesterday 5pm',service="r
                 'pretty': True,
                 'results':10}
         
-        params[service]=value
+        for service in services:
+            params[service]=True
+            
         logger.info("calling API")
         r = requests.get('https://v6.db.transport.rest/stops/'+str(station_id)+'/departures?',params=params, headers=headers,timeout=5)
 
@@ -141,3 +143,4 @@ def journeyPlanner(origin=8004158,destination=8000078,when='tomorrow 6:50am'):
     
     
 #journeyPlanner()
+retrieveDepartures()
