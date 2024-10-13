@@ -15,11 +15,12 @@ def bot_send_msg(msg):
       bot = telebot.TeleBot(__main__.botToken)  
       bot.send_message(__main__.destinatary,msg)
       logger.info("message sent succesfully")
+      return
     except:
         #perhaps reconnect, etc.
         logger.error("Problem while trying to send a msg, attemp number: "+str(attempt))
-        
-  return
+  
+  return 
 
 
 def getNewUsers():

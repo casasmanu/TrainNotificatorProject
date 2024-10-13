@@ -157,4 +157,4 @@ def journeyPlanner(origin=8004158,destination=8000078,when='tomorrow 6:50am'):
 # Ostbahnof -> 8010255
 
 #journeyPlanner()
-retrieveDepartures(station_id=625212,desiredDate='now',direction=624479,services=['bus'])
+#retrieveDepartures(station_id=625212,desiredDate='now',direction=624479,services=['bus'])
