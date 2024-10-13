@@ -54,7 +54,7 @@ def main():
         schedule.run_pending()
         time.sleep(5)
 
-retrieveDepartures(station_id=625212,desiredDate='now',direction=624479,services=['bus'])
-
+#retrieveDepartures(station_id=625212,desiredDate='now',direction=624479,services=['bus'])
+retrieveDepartures(station_id=8000261,desiredDate="tomorrow 7am")
 if __name__ == "__main__":
     main()

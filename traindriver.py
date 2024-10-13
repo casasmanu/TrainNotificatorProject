@@ -66,7 +66,7 @@ def retrieveDepartures(station_id=8000078,desiredDate='yesterday 5pm',services=[
                 
                 if departure['platform']!= None:
                     Platform=departure['platform']
-                    departureImportantData.append=["| Gleis "+Platform]
+                    departureImportantData.append("| Gleis "+Platform)
                     
                 bahnhof.append(departureImportantData)
         
