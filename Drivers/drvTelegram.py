@@ -17,7 +17,7 @@ def bot_send_msg(msg):
       logger.info("message sent succesfully")
     except:
         #perhaps reconnect, etc.
-        logger.error("Problem while trying to send a msg, attemp number: "+attempt)
+        logger.error("Problem while trying to send a msg, attemp number: "+str(attempt))
         
   return
 
