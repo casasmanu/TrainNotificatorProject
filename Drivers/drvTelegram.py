@@ -8,12 +8,17 @@ import __main__
 
 #define usefull functions
 def bot_send_msg(msg):
-  try:
-    bot = telebot.TeleBot(__main__.botToken)  
-    bot.send_message(__main__.destinatary,msg)
-    logger.info("message sent succesfully")
-  except:
-    logger.error("Problem while trying to send a msg")
+  
+  for attempt in range(3):
+    try:
+      # do thing
+      bot = telebot.TeleBot(__main__.botToken)  
+      bot.send_message(__main__.destinatary,msg)
+      logger.info("message sent succesfully")
+    except:
+        #perhaps reconnect, etc.
+        logger.error("Problem while trying to send a msg, attemp number: "+attempt)
+        
   return
 
 

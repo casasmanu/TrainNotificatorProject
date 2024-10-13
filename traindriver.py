@@ -8,12 +8,10 @@ logger = logging.getLogger(__name__)
 
 #Station Monitor
 
-#DONA - 8000078
-#Pasing - 8004158
-#Munchen - 8000261
-#Augsburg
 
-def retrieveDepartures(station_id=8000078,desiredDate='yesterday 5pm',services=["nationalExpress"]):
+
+def retrieveDepartures(station_id=8000078,desiredDate='yesterday 5pm',services=["nationalExpress"],direction=''):
+    #define services to be retrieved and as optional, direction
     
     bahnhof=[]
     try:    
@@ -33,6 +31,10 @@ def retrieveDepartures(station_id=8000078,desiredDate='yesterday 5pm',services=[
                 'pretty': True,
                 'results':10}
         
+        if (direction!=''):
+            params["direction"]=direction
+            
+        
         for service in services:
             params[service]=True
             
@@ -49,7 +51,6 @@ def retrieveDepartures(station_id=8000078,desiredDate='yesterday 5pm',services=[
             PlannedDate=datetime.datetime.strftime(datePlannedDate,"%H:%M")
                 
             if dict.__contains__(departure,'cancelled'):
-
                 departureImportantData=[TrainName,Destination,PlannedDate,"CANCELADO"]
                 bahnhof.append(departureImportantData)
 
@@ -57,15 +58,19 @@ def retrieveDepartures(station_id=8000078,desiredDate='yesterday 5pm',services=[
                 dateActualDate=datetime.datetime.strptime(departure['when'][:-9],"%Y-%m-%dT%H:%M")
                 delayTime=departure['when'][-6:]
                 ActualDate=datetime.datetime.strftime(dateActualDate,"%H:%M")
-                Platform=departure['platform']
+                
                 departureImportantData=[TrainName,
                                         "| Destination "+Destination,
                                         "| Planned "+PlannedDate,
-                                        "| Actual Time "+ActualDate+delayTime[:-3]
-                                        ,"| Gleis "+Platform]
+                                        "| Actual Time "+ActualDate+delayTime[:-3]]
+                
+                if departure['platform']!= None:
+                    Platform=departure['platform']
+                    departureImportantData.append=["| Gleis "+Platform]
+                    
                 bahnhof.append(departureImportantData)
         
-            #print (departureImportantData)
+            print (departureImportantData)
     except Exception as e:
         logger.error(e)
         bahnhof.append("Error while trying to retrieve station data")
@@ -98,7 +103,8 @@ def journeyPlanner(origin=8004158,destination=8000078,when='tomorrow 6:50am'):
                 'bus':False,
                 'subway':False,
                 'tram':False,
-                'taxi':False}
+                'taxi':False
+                }
         
         #params[service]=value
         logger.info("calling API")
@@ -141,6 +147,14 @@ def journeyPlanner(origin=8004158,destination=8000078,when='tomorrow 6:50am'):
         
     bot_send_msg(strfahrt)
     
-    
+
+# DONA - 8000078
+# Pasing - 8004158
+# Munchen - 8000261
+# Augsburg
+# Steubenplatz 625212
+# Schwester-Eubulina-Platz ->  624479
+# Ostbahnof -> 8010255
+
 #journeyPlanner()
-retrieveDepartures()
+retrieveDepartures(station_id=625212,desiredDate='now',direction=624479,services=['bus'])

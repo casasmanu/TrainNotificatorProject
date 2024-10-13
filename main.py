@@ -34,16 +34,20 @@ def main():
     #Pasing - 8004158
     #Munchen - 8000261
     # Programa las llamadas a las funciones en intervalos diferentes
+    
+    schedule.every().day.at("06:40").do(
+        retrieveDepartures,station_id=625212,desiredDate="now",services=["bus"],direction=624479)
+    
     schedule.every().day.at("06:30").do(
         retrieveDepartures,station_id=8004158,desiredDate="7am")
     
-    schedule.every().day.at("16:30").do(
+    schedule.every().day.at("15:30").do(
         retrieveDepartures,station_id=8000078,desiredDate="5pm")
     
-    schedule.every().day.at("22:00").do(
+    schedule.every().day.at("20:30").do(
         journeyPlanner,origin=8000261,destination=8000078,when="tomorrow 7am")
     
-    schedule.every().day.at("23:00").do(
+    schedule.every().day.at("20:35").do(
         retrieveDepartures,station_id=8000261,desiredDate="tomorrow 7am")
     
     while True:
