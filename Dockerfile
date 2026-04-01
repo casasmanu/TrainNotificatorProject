@@ -1,8 +1,13 @@
-FROM python
-ENV TZ="Europe/Berlin"
+FROM python:3.13-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+	PYTHONUNBUFFERED=1 \
+	TZ=Europe/Berlin
+
 WORKDIR /app
-COPY . /app/
-RUN apt-get update && apt-get install -y python3 && apt-get install -y python3-pip
-RUN pip3 install -r /app/requirements.txt
-ENTRYPOINT ["python3"]
-CMD ["main.py"]
+
+# Install dependencies in the image layer. Source code will be bind-mounted at runtime.
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+CMD ["python", "main.py"]

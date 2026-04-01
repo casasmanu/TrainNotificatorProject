@@ -2,9 +2,42 @@ import requests
 import json
 import datetime
 import logging
+import time
 from Drivers.drvTelegram import bot_send_msg
 # ----------------------- Variables ----------------------- #
 logger = logging.getLogger(__name__)
+
+
+def _format_api_time(value):
+    if not value:
+        return "N/A"
+    try:
+        return datetime.datetime.fromisoformat(value.replace("Z", "+00:00")).strftime("%H:%M")
+    except ValueError:
+        return value
+
+
+def _request_with_retry(url, params, headers, timeout=12, retries=3, backoff_seconds=1.5):
+    last_error = None
+    for attempt in range(1, retries + 1):
+        try:
+            response = requests.get(url, params=params, headers=headers, timeout=timeout)
+            retryable_statuses = {429, 500, 502, 503, 504}
+            if response.status_code in retryable_statuses and attempt < retries:
+                logger.warning(f"API temporary error {response.status_code}, retry {attempt}/{retries}")
+                time.sleep(backoff_seconds * attempt)
+                continue
+            return response
+        except (requests.Timeout, requests.ConnectionError) as request_error:
+            last_error = request_error
+            if attempt < retries:
+                logger.warning(f"API timeout/connection issue, retry {attempt}/{retries}")
+                time.sleep(backoff_seconds * attempt)
+                continue
+            raise
+    if last_error:
+        raise last_error
+    raise Exception("API request failed after retries")
 
 #Station Monitor
 
@@ -13,66 +46,96 @@ logger = logging.getLogger(__name__)
 #Munchen - 8000261
 #Augsburg
 
-def retrieveDepartures(station_id=8000078,desiredDate='yesterday 5pm',service="regional",value=True):
+def retrieveDepartures(station_id=8000078, desiredDate='yesterday 5pm', service=None, value=True):
     
     bahnhof=[]
     try:    
         headers = {'Accept': 'application/json'}
 
         params = {'when': desiredDate,
-                'duration':30,
-                'nationalExpress': False,
-                'national': False,
-                'regionalExpress':False,
-                'regional':False,
-                'suburban':False,
-                'bus':False,
-                'subway':False,
-                'tram':False,
-                'taxi':False,
+                'duration': 30,
+                'nationalExpress': True,
+                'national': True,
+                'regionalExpress': True,
+                'regional': True,
+                'suburban': True,
+                'bus': True,
+                'subway': True,
+                'tram': True,
+                'taxi': True,
                 'pretty': True,
-                'results':10}
+                'results': 10}
+
+        if service in params:
+            for key in ('nationalExpress', 'national', 'regionalExpress', 'regional', 'suburban', 'bus', 'subway', 'tram', 'taxi'):
+                params[key] = False
+            params[service] = value
         
-        params[service]=value
         logger.info("calling API")
-        r = requests.get('https://v6.db.transport.rest/stops/'+str(station_id)+'/departures?',params=params, headers=headers,timeout=5)
+        r = _request_with_retry(
+            'https://v6.db.transport.rest/stops/'+str(station_id)+'/departures?',
+            params=params,
+            headers=headers,
+            timeout=12,
+            retries=8,
+            backoff_seconds=2,
+        )
+
+        if r.status_code != 200:
+            raise Exception(f"API returned status {r.status_code}: {r.text}")
 
         myjson=json.loads(r.text)
+        
+        if myjson is None:
+            raise Exception("API returned null")
+        
+        if 'departures' not in myjson:
+            raise Exception(f"API response missing 'departures' key: {myjson}")
 
         logger.info("dividing departures and taking only important data")
-        for departure in myjson['departures']:
-            TrainName= departure['line']['name']
-            Destination= departure['destination']['name']
-            datePlannedDate=datetime.datetime.strptime(departure['plannedWhen'][:-9],"%Y-%m-%dT%H:%M")
-            PlannedDate=datetime.datetime.strftime(datePlannedDate,"%H:%M")
-                
-            if dict.__contains__(departure,'cancelled'):
+        departures = myjson.get('departures') or []
+        for departure in departures:
+            line = departure.get('line') or {}
+            train_name = line.get('name', 'Unknown')
 
-                departureImportantData=[TrainName,Destination,PlannedDate,"CANCELADO"]
-                bahnhof.append(departureImportantData)
-
+            destination_data = departure.get('destination')
+            if isinstance(destination_data, dict):
+                destination = destination_data.get('name', 'Unknown')
             else:
-                dateActualDate=datetime.datetime.strptime(departure['when'][:-9],"%Y-%m-%dT%H:%M")
-                delayTime=departure['when'][-6:]
-                ActualDate=datetime.datetime.strftime(dateActualDate,"%H:%M")
-                Platform=departure['platform']
-                departureImportantData=[TrainName,
-                                        "| Destination "+Destination,
-                                        "| Planned "+PlannedDate,
-                                        "| Actual Time "+ActualDate+delayTime[:-3]
-                                        ,"| Gleis "+Platform]
-                bahnhof.append(departureImportantData)
+                destination = destination_data or 'Unknown'
+
+            planned_date = _format_api_time(departure.get('plannedWhen'))
+
+            if departure.get('cancelled', False):
+                departure_important_data = [train_name, destination, planned_date, 'CANCELADO']
+                bahnhof.append(departure_important_data)
+            else:
+                actual_date = _format_api_time(departure.get('when'))
+                platform = str(departure.get('platform') or 'N/A')
+                departure_important_data = [
+                    train_name,
+                    '| Destination ' + destination,
+                    '| Planned ' + planned_date,
+                    '| Actual Time ' + actual_date,
+                    '| Gleis ' + platform,
+                ]
+                bahnhof.append(departure_important_data)
         
             #print (departureImportantData)
     except Exception as e:
-        logger.error(e)
-        bahnhof.append("Error while trying to retrieve station data")
-        logger.error("error while trying to retrieve station data")
+        logger.exception(f"retrieveDepartures failed after retries: {e}")
+        return
     
     outputString=""
     for i in bahnhof:
-        string = " ".join(i)
+        if isinstance(i, list):
+            string = " ".join(i)
+        else:
+            string = str(i)
         outputString+=string + " \n\n"
+
+    if not outputString.strip():
+        outputString = "No departures available at this time."
 
     logger.info("Send message via TELEGRAM")
     print(outputString)
@@ -80,7 +143,7 @@ def retrieveDepartures(station_id=8000078,desiredDate='yesterday 5pm',service="r
 
 #https://v6.db.transport.rest/journeys?
 
-def journeyPlanner(origin=8004158,destination=8000078,when='tomorrow 6:50am'):
+def journeyPlanner(origin=8004158,destination=8000078,when='tomorrow 6:50am',preferred_train='ICE 802'):
     try:    
         headers = {'Accept': 'application/json'}
 
@@ -100,43 +163,72 @@ def journeyPlanner(origin=8004158,destination=8000078,when='tomorrow 6:50am'):
         
         #params[service]=value
         logger.info("calling API")
-        r = requests.get('https://v6.db.transport.rest/journeys?',params=params, headers=headers,timeout=5)
+        r = _request_with_retry(
+            'https://v6.db.transport.rest/journeys?',
+            params=params,
+            headers=headers,
+            timeout=12,
+            retries=8,
+            backoff_seconds=2,
+        )
+
+        if r.status_code != 200:
+            raise Exception(f"API returned status {r.status_code}: {r.text}")
 
         myjson=json.loads(r.text)
+        
+        if myjson is None:
+            raise Exception("API returned null")
+        
+        if 'journeys' not in myjson:
+            raise Exception(f"API response missing 'journeys' key: {myjson}")
         
         #myjson['journeys'][0]['legs'][0]['departure']
         #myjson['journeys'][0]['legs'][0]['arrival']
         #myjson['journeys'][0]['legs'][0]['plannedDeparturePlatform']
         #myjson['journeys'][0]['legs'][0]['line']['name']
         
-        fahrt=[]
-        ICEtripFound=False
-        description="NO AVAILABLE TRAIN FOUNDED OR PROBLEM"
-        PlannedDate=""
-        platform=""
-        
-        for journey in myjson['journeys']:
-            trainName= journey['legs'][0]['line']['name']   #'ICE 802'
-            if trainName=='ICE 802':
-                description="ICE 802 founded, please check data below \n"
-                datePlannedDate=datetime.datetime.strptime(journey['legs'][0]['plannedDeparture'][:-9],"%Y-%m-%dT%H:%M")
-                PlannedDate=" Time: "+datetime.datetime.strftime(datePlannedDate,"%H:%M")
-                platform=" | Platform: " + journey['legs'][0]['plannedDeparturePlatform']
+        strfahrt = "No journey information available."
+        found_preferred = False
+
+        for journey in myjson.get('journeys', []):
+            legs = journey.get('legs') or []
+            for leg in legs:
+                line = leg.get('line') or {}
+                train_name = line.get('name', '')
+                if train_name == preferred_train:
+                    planned = _format_api_time(leg.get('plannedDeparture') or leg.get('departure'))
+                    platform = str(leg.get('plannedDeparturePlatform') or leg.get('departurePlatform') or 'N/A')
+                    strfahrt = f"{preferred_train} found for {when}. Time: {planned} | Platform: {platform}"
+                    found_preferred = True
+                    break
+            if found_preferred:
                 break
-            elif(trainName=='RB 87'):
-                description="ACHTUNG! RB 87 founded, check trip and leave home EARLY \n"
-                datePlannedDate=datetime.datetime.strptime(journey['legs'][0]['plannedDeparture'][:-9],"%Y-%m-%dT%H:%M")
-                PlannedDate=" Time: "+datetime.datetime.strftime(datePlannedDate,"%H:%M")
-                platform=" | Platform: " + journey['legs'][0]['plannedDeparturePlatform']
+
+        if strfahrt == "No journey information available.":
+            for journey in myjson.get('journeys', []):
+                legs = journey.get('legs') or []
+                if not legs:
+                    continue
+                first_leg = legs[0]
+                line = first_leg.get('line') or {}
+                train_name = line.get('name', 'Unknown')
+                planned = _format_api_time(first_leg.get('plannedDeparture') or first_leg.get('departure'))
+                platform = str(first_leg.get('plannedDeparturePlatform') or first_leg.get('departurePlatform') or 'N/A')
+                strfahrt = f"{preferred_train} not found. Next option: {train_name} at {planned} | Platform: {platform}"
                 break
-            
-        strfahrt=description + PlannedDate+ platform
             
         print(strfahrt)
+    except requests.Timeout:
+        logger.error("journeyPlanner timeout while calling API")
+        return
     except Exception as e:
-        print(e)
-        strfahrt="error while calling API, please check manually"
+        logger.exception(f"journeyPlanner failed: {e}")
+        return
         
+    if not strfahrt.strip():
+        strfahrt = "No journey information available."
+
     bot_send_msg(strfahrt)
     
     

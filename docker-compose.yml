@@ -1,0 +1,13 @@
+services:
+  train-notificator:
+    image: train-notificator:latest
+    container_name: train-notificator
+    restart: unless-stopped
+    working_dir: /app
+    command: python main.py
+    env_file:
+      - /home/manu/Workspace/TrainNotificatorProject/.env
+    environment:
+      - TZ=Europe/Berlin
+    volumes:
+      - /home/manu/Workspace/TrainNotificatorProject:/app

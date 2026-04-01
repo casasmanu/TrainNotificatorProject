@@ -19,17 +19,5 @@ def initLogger():
     logger.addHandler(file_handler)
     logger.addHandler(stdout_handler)
 
-    
     logger.info('----------------------------------')
     logger.info('logger set up corretly')
-    #return logger
-
-## this is for testings, probably no longer needed.
-## just add the import in the module needed and use :
-#
-#   import logging
-#   logger = logging.getLogger(__name__)
-
-def log(logger):
-    logger.info('This is a log message!')
-    logger.error('This is an error message.')

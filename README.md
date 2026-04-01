@@ -8,3 +8,23 @@ functions ideas:
 - stations finder: send station name, and when possible type ( stop or station) and retrieves id of the desired station
 - Create the schedules in main, to run in the moments that i want ( for now, when im waking up, and getting ready to leave the office, check the trains)
 - prepare to deploy and run in docker ( requisites.txt )
+
+
+HOW TO Setup
+in order to set up the environment, run the next commands:
+- python -m venv .venv
+- source ./.venv/bin/activate
+- pip install -r ./requierements.txt
+
+Si no querés build en compose, el flujo manual queda así:
+
+Build manual cuando quieras:
+docker build -t bot-notificator:latest .
+
+Levantar sin build:
+docker compose up -d
+Si cambias solo código Python (con volumen), normalmente alcanza con:
+docker compose restart
+Si cambias requirements:
+docker build -t train-notificator:latest .
+docker compose up -d
